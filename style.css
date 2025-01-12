@@ -1,0 +1,22 @@
+body {
+    background-color: #555555;
+}
+#note-container {
+    display: grid;
+    grid-template-columns: repeat(12, 70px); /* 12 columns */
+    grid-template-rows: repeat(12, 50px);   /* 12 rows */
+    gap: 5px; /* Optional: space between grid items */
+    
+}
+.grid-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width:70px;
+    height: 50px;
+    font-family: Helvetica, sans-serif;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #888888;
+    user-select: none;
+}
