@@ -3,7 +3,7 @@ body {
     margin: 0px;
 }
 #note-container {
-    padding-top: 60px;
+    padding-top: 65px;
     padding-left: 5px;
     display: grid;
     grid-template-columns: repeat(2, 70px);
@@ -29,6 +29,7 @@ body {
     width: 100px;
     font-family: Helvetica, sans-serif;
     font-size: 15px;
+    user-select: none;
 }
 #toolbar button:hover {
     background-color: #bbbbbb;
@@ -65,11 +66,14 @@ body {
     padding: 10px;
     background-color: black;
     z-index: 100;
+    flex-direction: column;
+    gap: 5px;
 }
 #context-menu button {
     border: none;
     border-radius: 3px;
     padding: 5px 20px;
+    user-select: none;
 }
 #context-menu button:hover {
     background-color: #bbbbbb;
@@ -91,5 +95,24 @@ body {
     bottom: 0;
     width: 7px;
     background-color: rgba(0, 0, 0, 0.2);
+    cursor: ew-resize;
+}
+#playbar {
+    height: 100%;
+    width: 3px;
+    position:fixed;
+    background-color: orange;
+    left: 80px;
+    z-index: 10;
+    user-select: none;
+}
+#playbar-controller {
+    position:fixed;
+    height: 10px;
+    width: 400px;
+    background-color: #229999;
+    left: 80px;
+    top: 50px;
+    z-index: 8;
     cursor: ew-resize;
 }
