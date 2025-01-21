@@ -3,12 +3,6 @@ const playbar = document.getElementById("playbar")
 
 
 let firstNoteArea = null;
-for (const child of container.children) {
-  if (child.classList.contains('grid-noteArea')) {
-    firstNoteArea = child;
-    break;
-  }
-}
 
 
 let speed = bpmToSpeed(120); // Initial speed (120 BPM)
@@ -75,33 +69,29 @@ function loadPiano() {
     }
     adjustPlaybarControllerSize();
 }
+let activeOscillators = []; // Array to keep track of active oscillators
+
 function playSound(frequency, duration) {
-  // Create an audio context
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-  // Create an oscillator node
   const oscillator = audioContext.createOscillator();
-  oscillator.type = "sine"; // You can use "sine", "square", "sawtooth", "triangle", or "custom"
-  oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime); // Set pitch (in Hz)
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
 
-  // Create a gain node to control volume
   const gainNode = audioContext.createGain();
-  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Set volume (0 to 1)
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
 
-  // Connect the oscillator to the gain node and the gain node to the audio context
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
 
-  // Start the oscillator
   oscillator.start();
+  activeOscillators.push({ oscillator, audioContext }); // Add to active oscillators
 
-  // Stop the oscillator after the specified duration
   setTimeout(() => {
-      oscillator.stop();
-      audioContext.close();
+    oscillator.stop();
+    audioContext.close();
+    activeOscillators = activeOscillators.filter(o => o.oscillator !== oscillator); // Remove from active oscillators
   }, duration);
 }
-
 
 function playMusic() {
   const musicQueue = {}; // Dictionary to store pitches and their left values
@@ -258,11 +248,18 @@ function adjustPlaybarControllerSize() {
 
 
 document.getElementById("stop").addEventListener("click", () => {
-  animating = false
+  animating = false;
   if (window.animationTimeout) {
     clearTimeout(window.animationTimeout);
   }
   playbar.style.left = "80px";
+
+  // Stop all active oscillators
+  activeOscillators.forEach(({ oscillator, audioContext }) => {
+    oscillator.stop();
+    audioContext.close();
+  });
+  activeOscillators = []; // Clear the array
 });
 
 
@@ -326,88 +323,6 @@ let startX;
 let note;
 
 
-document.querySelectorAll('.grid-noteArea').forEach(container => {
-  container.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      currentContainer = container; // Save the reference to the right-clicked container
-
-      customMenu.querySelectorAll('.click-note').forEach(child => {
-          child.style.display = 'none';
-      });
-      customMenu.style.top = `${e.clientY}px`;
-      customMenu.style.left = `${e.clientX}px`;
-      customMenu.style.display = 'flex';
-  });
-  container.addEventListener("mousedown", (event) => {
-    if (event.target.classList.contains("note")) {
-
-      note = event.target;
-  
-      // Check if the user is clicking near the right edge to resize
-      const rect = note.getBoundingClientRect();
-      const offsetX = event.clientX - rect.left;
-  
-      if (offsetX > rect.width - 10) {
-        isResizing = true;
-      } else {
-        isDragging = true;
-      }
-  
-      startX = event.clientX;
-      event.preventDefault();
-    }
-  });
-  document.addEventListener("mousemove", (event) => {
-    if (isDragging) {
-  
-  
-  
-  
-  
-  
-  
-  
-      const dx = event.clientX - startX; //x axis distance mouse has traveled since last event fire
-      startX = event.clientX; //update variable for next event fire
-  
-      
-      const left = parseInt(note.style.left || "0", 10); //current left value of note
-      const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
-  
-      // container and note boundaries (we're only using left and right)
-      const containerRect = container.getBoundingClientRect();
-      const noteRect = note.getBoundingClientRect();
-  
-      //noterect.right = total distance from left side of screen to right side of note
-      if (!(noteRect.right+dx > containerRect.right)) { //plus dx to ensure the element is not stuck at edge
-        note.style.left = newLeft + "px";
-      }
-  
-  
-  
-  
-  
-  
-    } else if (isResizing) {
-      const dx = event.clientX - startX;
-      startX = event.clientX;
-  
-      // Resize the note
-      const width = parseInt(note.style.width || "50", 10);
-      const newWidth = Math.max(10, width + dx);
-  
-      // Get container and note boundaries
-      const containerRect = container.getBoundingClientRect();
-      const noteRect = note.getBoundingClientRect();
-  
-      if (!(noteRect.right + dx > containerRect.right)) {
-        note.style.width = newWidth + "px";
-      }
-    }
-  });
-
-
-});
 
 
 document.addEventListener("mouseup", () => {
@@ -419,6 +334,91 @@ document.addEventListener("mouseup", () => {
 
 document.addEventListener('DOMContentLoaded', function() {
   loadPiano();
+
+  document.querySelectorAll('.grid-noteArea').forEach(container => {
+    container.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        currentContainer = container; // Save the reference to the right-clicked container
+  
+        customMenu.querySelectorAll('.click-note').forEach(child => {
+            child.style.display = 'none';
+        });
+        customMenu.style.top = `${e.clientY}px`;
+        customMenu.style.left = `${e.clientX}px`;
+        customMenu.style.display = 'flex';
+    });
+    container.addEventListener("mousedown", (event) => {
+      if (event.target.classList.contains("note")) {
+  
+        note = event.target;
+    
+        // Check if the user is clicking near the right edge to resize
+        const rect = note.getBoundingClientRect();
+        const offsetX = event.clientX - rect.left;
+    
+        if (offsetX > rect.width - 10) {
+          isResizing = true;
+        } else {
+          isDragging = true;
+        }
+    
+        startX = event.clientX;
+        event.preventDefault();
+      }
+    });
+    document.addEventListener("mousemove", (event) => {
+      if (isDragging) {
+    
+    
+    
+    
+        const dx = event.clientX - startX; //x axis distance mouse has traveled since last event fire
+        startX = event.clientX; //update variable for next event fire
+    
+        
+        const left = parseInt(note.style.left || "0", 10); //current left value of note
+        const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
+    
+        // container and note boundaries (we're only using left and right)
+        const containerRect = container.getBoundingClientRect();
+        const noteRect = note.getBoundingClientRect();
+    
+        //noterect.right = total distance from left side of screen to right side of note
+        if (!(noteRect.right+dx > containerRect.right)) { //plus dx to ensure the element is not stuck at edge
+          note.style.left = newLeft + "px";
+        }
+    
+    
+    
+      } else if (isResizing) {
+        const dx = event.clientX - startX;
+        startX = event.clientX;
+    
+        // Resize the note
+        const width = parseInt(note.style.width || "50", 10);
+        const newWidth = Math.max(10, width + dx);
+    
+        // Get container and note boundaries
+        const containerRect = container.getBoundingClientRect();
+        const noteRect = note.getBoundingClientRect();
+    
+        if (!(noteRect.right + dx > containerRect.right)) {
+          note.style.width = newWidth + "px";
+        }
+      }
+    });
+  
+  
+  });
+
+
+  for (const child of container.children) {
+    if (child.classList.contains('grid-noteArea')) {
+      firstNoteArea = child;
+      break;
+    }
+  }
+
 
   const tempoValue = document.getElementById('tempo-value');
   const increaseButton = document.getElementById('increase');
