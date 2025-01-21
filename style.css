@@ -51,7 +51,7 @@ body {
     position: relative;
     align-items: center;
     justify-content: center;
-    width:400px;
+    width:1000px;
     height: 50px;
     font-family: Helvetica, sans-serif;
     border-radius: 5px;
@@ -116,3 +116,48 @@ body {
     z-index: 8;
     cursor: ew-resize;
 }
+
+
+
+#tempo-hover {
+    position: relative;
+    padding-bottom: 40px;
+}
+
+  
+#tempo-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    height: 30px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+#tempo-menu button {
+    display: flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    background-color: white;
+    cursor: pointer;
+}
+
+#tempo-menu input {
+    width: 50px;
+}
+
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none; /* Hides arrows in Chrome, Safari, Edge, and Opera */
+    margin:0px;
+}
+  
+  #tempo-hover:hover #tempo-menu {
+    display: flex;
+  }

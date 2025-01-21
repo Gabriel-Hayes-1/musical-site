@@ -2,8 +2,16 @@ const container = document.getElementById("note-container");
 const playbar = document.getElementById("playbar")
 
 
+let firstNoteArea = null;
+for (const child of container.children) {
+  if (child.classList.contains('grid-noteArea')) {
+    firstNoteArea = child;
+    break;
+  }
+}
 
-let speed = 50
+
+let speed = bpmToSpeed(120); // Initial speed (120 BPM)
 
 
 const customMenu = document.getElementById("context-menu")
@@ -23,6 +31,7 @@ const notes = [
     "D#", "D", "C#", "C"
 ];
 
+function bpmToSpeed(bpm) { return (60000 / bpm)/10; }
 
 const totalRows = rows * numofOctaves;
 
@@ -64,6 +73,7 @@ function loadPiano() {
 
         container.appendChild(gridItem);
     }
+    adjustPlaybarControllerSize();
 }
 function playSound(frequency, duration) {
   // Create an audio context
@@ -94,21 +104,74 @@ function playSound(frequency, duration) {
 
 
 function playMusic() {
-  //large function to play the music the user was making. 
-  //loop through every grid-notearea
-  //read
-  //wait (speed)
-  //if a note does start, start a sound for the pixelwidth * speed
-
+  const musicQueue = {}; // Dictionary to store pitches and their left values
+  
   for (let i = 0; i < allNoteSpaces.length; i++) {
     if (allNoteSpaces[i]) {
       for (let c of allNoteSpaces[i].children) {
-        console.log(c);
+        const noteLeft = parseInt(c.style.left || "0", 10); // Get the left position of the note
+        const noteWidth = parseInt(c.style.width || "50", 10); // Get the width of the note
+        const pitch = calculatePitch(i); // Calculate the pitch based on row index
+        
+        if (pitch) {
+          if (!musicQueue[pitch]) {
+            musicQueue[pitch] = [];
+          }
+          musicQueue[pitch].push(noteLeft);
+          musicQueue[pitch].push(noteWidth);
+        }
       }
     }
   }
+  for (const [pitch, table] of Object.entries(musicQueue)) {
+      setTimeout(() => {
+        playSound(noteToHertz(pitch), table[1] * speed);
+      }, table[0] * speed);
+  }
 }
 
+// Helper function to calculate the pitch based on the row index
+function calculatePitch(row) {
+  const noteIndex = row % rows; // Row index within an octave
+  const octave = numofOctaves - 1 - Math.floor(row / rows); // Calculate octave number
+  const noteName = notes[noteIndex]; // Get note name from notes array
+  
+  if (noteName) {
+    return `${noteName}${octave + 1}`; // Combine note name and octave
+  }
+  return null;
+}
+
+function noteToHertz(note) {
+  const noteRegex = /^([A-Ga-g])(#|b)?(\d+)$/;
+  const noteFrequencies = {
+      C: 16.35, D: 18.35, E: 20.60, F: 21.83, G: 24.50, A: 27.50, B: 30.87
+  };
+
+  const match = note.match(noteRegex);
+  if (!match) {
+      throw new Error("Invalid note format. Use something like A#4 or C7.");
+  }
+
+  let [_, baseNote, accidental, octave] = match;
+  baseNote = baseNote.toUpperCase();
+  octave = parseInt(octave);
+
+  // Calculate the base frequency for the given note
+  let frequency = noteFrequencies[baseNote];
+
+  // Adjust for sharps (#) or flats (b)
+  if (accidental === "#") {
+      frequency *= Math.pow(2, 1 / 12); // Move up one semitone
+  } else if (accidental === "b") {
+      frequency /= Math.pow(2, 1 / 12); // Move down one semitone
+  }
+
+  // Adjust for the octave
+  frequency *= Math.pow(2, octave);
+
+  return parseFloat(frequency.toFixed(2)); // Round to 2 decimal places
+}
 
 
 
@@ -183,6 +246,17 @@ function movePlaybarTo(position) {
 }
 
 
+
+
+function adjustPlaybarControllerSize() {
+  const firstNoteArea = document.querySelector('.grid-noteArea');
+  if (firstNoteArea) {
+      const noteAreaWidth = firstNoteArea.getBoundingClientRect().width;
+      playbarController.style.width = `${noteAreaWidth}px`;
+  }
+}
+
+
 document.getElementById("stop").addEventListener("click", () => {
   animating = false
   if (window.animationTimeout) {
@@ -243,15 +317,6 @@ document.addEventListener('click', () => {
 
 
 
-loadPiano();
-
-let firstNoteArea = null;
-  for (const child of container.children) {
-    if (child.classList.contains('grid-noteArea')) {
-      firstNoteArea = child;
-      break;
-    }
-  }
 
 
 
@@ -351,3 +416,26 @@ document.addEventListener("mouseup", () => {
   playbarDrag = false;
 });
 
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadPiano();
+
+  const tempoValue = document.getElementById('tempo-value');
+  const increaseButton = document.getElementById('increase');
+  const decreaseButton = document.getElementById('decrease');
+
+
+  tempoValue.addEventListener('input', function() {
+    speed = bpmToSpeed(parseInt(tempoValue.value));
+  });
+
+  increaseButton.addEventListener('click', function() {
+      tempoValue.value = parseInt(tempoValue.value) + 1;
+      speed = bpmToSpeed(parseInt(tempoValue.value));
+  });
+
+  decreaseButton.addEventListener('click', function() {
+      tempoValue.value = parseInt(tempoValue.value) - 1;
+      speed = bpmToSpeed(parseInt(tempoValue.value));
+  });
+});
