@@ -87,6 +87,9 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     cursor:move;
 }
+.selected-note {
+    border: 1px solid blue;
+}
 .note::before {
     content: "";
     position: absolute;

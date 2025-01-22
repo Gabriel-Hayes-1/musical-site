@@ -3,6 +3,9 @@ const playbar = document.getElementById("playbar")
 
 
 let firstNoteArea = null;
+let firstNoteName = null;
+let firstNoteNameWidth = null;
+let clipboard = null;
 
 
 let speed = bpmToSpeed(120); // Initial speed (120 BPM)
@@ -25,7 +28,7 @@ const notes = [
     "D#", "D", "C#", "C"
 ];
 
-function bpmToSpeed(bpm) { return (60000 / bpm)/10; }
+function bpmToSpeed(bpm) { return (60000 / bpm)/20; }
 
 const totalRows = rows * numofOctaves;
 
@@ -95,6 +98,7 @@ function playSound(frequency, duration) {
 
 function playMusic() {
   const musicQueue = {}; // Dictionary to store pitches and their left values
+  const initialPlaybarPosition = parseInt(playbar.style.left || "80", 10); // Get the initial position of the playbar
   
   for (let i = 0; i < allNoteSpaces.length; i++) {
     if (allNoteSpaces[i]) {
@@ -107,16 +111,24 @@ function playMusic() {
           if (!musicQueue[pitch]) {
             musicQueue[pitch] = [];
           }
-          musicQueue[pitch].push(noteLeft);
-          musicQueue[pitch].push(noteWidth);
+          musicQueue[pitch].push({ left: noteLeft, width: noteWidth });
         }
       }
     }
   }
-  for (const [pitch, table] of Object.entries(musicQueue)) {
-      setTimeout(() => {
-        playSound(noteToHertz(pitch), table[1] * speed);
-      }, table[0] * speed);
+  
+  for (const [pitch, notes] of Object.entries(musicQueue)) {
+    notes.forEach(note => {
+      const noteEnd = note.left + note.width;
+      const delay = (note.left - initialPlaybarPosition + firstNoteNameWidth) * speed;
+      if (delay >= 0) {
+        setTimeout(() => {
+          playSound(noteToHertz(pitch), note.width * speed);
+        }, delay);
+      } else if (initialPlaybarPosition > note.left) {
+        playSound(noteToHertz(pitch), (noteEnd-initialPlaybarPosition + firstNoteNameWidth) * speed);
+      }
+    });
   }
 }
 
@@ -184,8 +196,8 @@ function movePlaybar() {
   const targetPosition = areaSize.right;
 
   if (leftPosition >= targetPosition) {
-    playbar.style.left = "80px"
-    leftPosition = 80
+    playbar.style.left = `${firstNoteNameWidth}px`
+    leftPosition = firstNoteNameWidth;
   }
 
 
@@ -266,9 +278,11 @@ document.getElementById("stop").addEventListener("click", () => {
 
 
 document.getElementById("Clear").addEventListener("click", async () => {
-  document.querySelectorAll('.note').forEach(note => {
-    note.remove()
-  })
+  if (confirm("Are you sure you want to clear the notes?")) {
+    document.querySelectorAll('.note').forEach(note => {
+      note.remove()
+    })
+  }
 });
 
 
@@ -312,6 +326,42 @@ document.addEventListener('click', () => {
   customMenu.style.display = 'none';
 });
 
+//KEYPRESSES ------------------------------
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Backspace' && selectedNote) {
+    selectedNote.remove();
+    selectedNote = null;
+    customMenu.style.display = 'none';
+  }  else if (event.key === 'x' && event.ctrlKey && selectedNote) {
+    clipboard = selectedNote;
+    selectedNote.remove();
+    selectedNote = null;
+  } else if (event.key === 'c' && event.ctrlKey && selectedNote) {
+    clipboard = selectedNote;
+
+  } else if (event.key === 'v' && event.ctrlKey && clipboard) {
+    const newNote = clipboard.cloneNode(true);
+
+    newNote.addEventListener('contextmenu', (e) => {
+      lastClickedNote = newNote
+      e.preventDefault()
+      e.stopPropagation()
+
+      Array.from(customMenu.children).forEach(child => {
+        if (child.style.display == "none") {
+          child.style.display = 'block'
+        }
+      });
+      customMenu.style.top = `${e.clientY}px`;
+      customMenu.style.left = `${e.clientX}px`;
+      customMenu.style.display = 'flex';
+
+    });
+
+
+    currentContainer.appendChild(newNote);
+  }
+});
 
 
 
@@ -321,9 +371,7 @@ let isDragging = false;
 let isResizing = false;
 let startX;
 let note;
-
-
-
+let selectedNote = null;
 
 document.addEventListener("mouseup", () => {
   isDragging = false;
@@ -331,6 +379,12 @@ document.addEventListener("mouseup", () => {
   playbarDrag = false;
 });
 
+document.addEventListener('click', (event) => {
+  if (selectedNote && !event.target.classList.contains('note')) {
+    selectedNote.style.outline = ""; // Remove outline from previously selected note
+    selectedNote = null; // Reset selected note
+  }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
   loadPiano();
@@ -364,18 +418,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
         startX = event.clientX;
         event.preventDefault();
+
+        // Handle note selection
+        if (selectedNote) {
+          selectedNote.style.outline = ""; // Remove outline from previously selected note
+        }
+        selectedNote = note;
+        selectedNote.style.outline = "2px solid blue"; // Add outline to selected note
       }
     });
     document.addEventListener("mousemove", (event) => {
       if (isDragging) {
-    
-    
-    
-    
         const dx = event.clientX - startX; //x axis distance mouse has traveled since last event fire
         startX = event.clientX; //update variable for next event fire
     
-        
         const left = parseInt(note.style.left || "0", 10); //current left value of note
         const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
     
@@ -387,9 +443,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!(noteRect.right+dx > containerRect.right)) { //plus dx to ensure the element is not stuck at edge
           note.style.left = newLeft + "px";
         }
-    
-    
-    
       } else if (isResizing) {
         const dx = event.clientX - startX;
         startX = event.clientX;
@@ -407,10 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
-  
-  
   });
-
 
   for (const child of container.children) {
     if (child.classList.contains('grid-noteArea')) {
@@ -418,12 +468,26 @@ document.addEventListener('DOMContentLoaded', function() {
       break;
     }
   }
+  for (const child of container.children) {
+    if (child.classList.contains('grid-item')) {
+      firstNoteName = child;
 
+      const computedStyle = window.getComputedStyle(firstNoteName);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft);
+      const paddingRight = parseFloat(computedStyle.paddingRight);
+      const marginLeft = parseFloat(computedStyle.marginLeft);
+      const marginRight = parseFloat(computedStyle.marginRight);
+      const gap = parseFloat(computedStyle.gap); // If applicable
+
+      firstNoteNameWidth = firstNoteName.getBoundingClientRect().width + paddingLeft + paddingRight + marginLeft + marginRight + gap;
+
+      break;
+    }
+  }
 
   const tempoValue = document.getElementById('tempo-value');
   const increaseButton = document.getElementById('increase');
   const decreaseButton = document.getElementById('decrease');
-
 
   tempoValue.addEventListener('input', function() {
     speed = bpmToSpeed(parseInt(tempoValue.value));
