@@ -214,7 +214,7 @@ function movePlaybar() {
 
   animate(); // Start animation
 }
-playbar.style.left = "80px"
+playbar.style.left = `${firstNoteNameWidth}px`
 document.getElementById("start").addEventListener("click", () => {
   // Clear any ongoing animation
   if (window.animationTimeout) {
@@ -264,7 +264,7 @@ document.getElementById("stop").addEventListener("click", () => {
   if (window.animationTimeout) {
     clearTimeout(window.animationTimeout);
   }
-  playbar.style.left = "80px";
+  playbar.style.left = `${firstNoteNameWidth}px`;
 
   // Stop all active oscillators
   activeOscillators.forEach(({ oscillator, audioContext }) => {
@@ -299,6 +299,7 @@ document.getElementById("addNote").addEventListener("click", () =>{
     currentContainer.appendChild(note);
     
     note.addEventListener('contextmenu', (e) => {
+      currentContainer = note.parentElement
       lastClickedNote = note
       e.preventDefault()
       e.stopPropagation()
@@ -325,44 +326,98 @@ document.getElementById("deleteNote").addEventListener("click", () => {
 document.addEventListener('click', () => {
   customMenu.style.display = 'none';
 });
-
-//KEYPRESSES ------------------------------
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Backspace' && selectedNote) {
-    selectedNote.remove();
+document.addEventListener('mousedown', () => {
+  if (!selectedNote) {
+    selectedNote.style.outline = "";
     selectedNote = null;
-    customMenu.style.display = 'none';
-  }  else if (event.key === 'x' && event.ctrlKey && selectedNote) {
-    clipboard = selectedNote;
-    selectedNote.remove();
-    selectedNote = null;
-  } else if (event.key === 'c' && event.ctrlKey && selectedNote) {
-    clipboard = selectedNote;
-
-  } else if (event.key === 'v' && event.ctrlKey && clipboard) {
-    const newNote = clipboard.cloneNode(true);
-
-    newNote.addEventListener('contextmenu', (e) => {
-      lastClickedNote = newNote
-      e.preventDefault()
-      e.stopPropagation()
-
-      Array.from(customMenu.children).forEach(child => {
-        if (child.style.display == "none") {
-          child.style.display = 'block'
-        }
-      });
-      customMenu.style.top = `${e.clientY}px`;
-      customMenu.style.left = `${e.clientX}px`;
-      customMenu.style.display = 'flex';
-
-    });
-
-
-    currentContainer.appendChild(newNote);
   }
 });
 
+//KEYPRESSES --------------------------------------------------
+//#############################################################
+//-------------------------------------------------------------
+let undoStack = [];
+let redoStack = [];
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Backspace' && selectedNote) {
+    undoStack.push({ action: 'remove', note: selectedNote });
+    selectedNote.remove();
+    selectedNote = null;
+    customMenu.style.display = 'none';
+  } else if (event.key === 'x' && event.ctrlKey && selectedNote) {
+    cut();
+  } else if (event.key === 'c' && event.ctrlKey && selectedNote) {
+    copy();
+  } else if (event.key === 'v' && event.ctrlKey && clipboard) {
+    paste();
+  } else if (event.key === 'z' && event.ctrlKey) {
+    undo();
+  } else if (event.key === 'y' && event.ctrlKey) {
+    redo();
+  }
+});
+
+function copy() {
+  clipboard = selectedNote;
+}
+
+function cut() {
+  undoStack.push({ action: 'remove', note: selectedNote });
+  clipboard = selectedNote;
+  selectedNote.remove();
+  selectedNote = null;
+}
+
+function paste() {
+  const newNote = clipboard.cloneNode(true);
+  newNote.style.outline = "";
+  addNoteEventListeners(newNote);
+  currentContainer.appendChild(newNote);
+  undoStack.push({ action: 'add', note: newNote });
+}
+
+function undo() {
+  const lastAction = undoStack.pop();
+  if (lastAction) {
+    redoStack.push(lastAction);
+    if (lastAction.action === 'remove') {
+      currentContainer.appendChild(lastAction.note);
+    } else if (lastAction.action === 'add') {
+      lastAction.note.remove();
+    }
+  }
+}
+
+function redo() {
+  const lastAction = redoStack.pop();
+  if (lastAction) {
+    undoStack.push(lastAction);
+    if (lastAction.action === 'remove') {
+      lastAction.note.remove();
+    } else if (lastAction.action === 'add') {
+      currentContainer.appendChild(lastAction.note);
+    }
+  }
+}
+
+function addNoteEventListeners(note) {
+  note.addEventListener('contextmenu', (e) => {
+    currentContainer = note.parentElement;
+    lastClickedNote = note;
+    e.preventDefault();
+    e.stopPropagation();
+
+    Array.from(customMenu.children).forEach(child => {
+      if (child.style.display == "none") {
+        child.style.display = 'block';
+      }
+    });
+    customMenu.style.top = `${e.clientY}px`;
+    customMenu.style.left = `${e.clientX}px`;
+    customMenu.style.display = 'flex';
+  });
+}
 
 
 
@@ -472,14 +527,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (child.classList.contains('grid-item')) {
       firstNoteName = child;
 
-      const computedStyle = window.getComputedStyle(firstNoteName);
-      const paddingLeft = parseFloat(computedStyle.paddingLeft);
-      const paddingRight = parseFloat(computedStyle.paddingRight);
-      const marginLeft = parseFloat(computedStyle.marginLeft);
-      const marginRight = parseFloat(computedStyle.marginRight);
-      const gap = parseFloat(computedStyle.gap); // If applicable
+      const parentComputedStyle = window.getComputedStyle(container);
+      const gap = parseFloat(parentComputedStyle.rowGap);
+      const paddingLeft = parseFloat(parentComputedStyle.paddingLeft);
 
-      firstNoteNameWidth = firstNoteName.getBoundingClientRect().width + paddingLeft + paddingRight + marginLeft + marginRight + gap;
+      firstNoteNameWidth = firstNoteName.getBoundingClientRect().width +gap+paddingLeft;
 
       break;
     }
