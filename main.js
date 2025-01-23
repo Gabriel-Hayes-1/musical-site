@@ -189,8 +189,7 @@ function bgColor(element, row) {
 let animating = false
 // Define the movePlaybar function
 function movePlaybar() {
-  let leftPosition = parseInt(playbar.style.left); // Starting position as a number
-
+  let leftPosition = firstNoteNameWidth; // Starting position as a number
   
   const areaSize = firstNoteArea.getBoundingClientRect();
   const targetPosition = areaSize.right;
@@ -469,12 +468,10 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-  for (const child of container.children) {
-    if (child.classList.contains('grid-noteArea')) {
-      firstNoteArea = child;
-      break;
-    }
-  }
+  loadPiano();
+
+
+  firstNoteArea = document.querySelector('.grid-noteArea')
   for (const child of container.children) {
     if (child.classList.contains('grid-item')) {
       firstNoteName = child;
@@ -490,7 +487,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
 
-  loadPiano();
 
   document.querySelectorAll('.grid-noteArea').forEach(container => {
     container.addEventListener('contextmenu', (e) => {
