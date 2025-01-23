@@ -318,7 +318,9 @@ document.getElementById("addNote").addEventListener("click", () =>{
 });
 
 document.getElementById("deleteNote").addEventListener("click", () => {
-  lastClickedNote.remove()
+  undoStack.push({ action: 'remove', note: lastClickedNote });
+    lastClickedNote.remove();
+    lastClickedNote = null;
 });
 
 
@@ -326,12 +328,7 @@ document.getElementById("deleteNote").addEventListener("click", () => {
 document.addEventListener('click', () => {
   customMenu.style.display = 'none';
 });
-document.addEventListener('mousedown', () => {
-  if (!selectedNote) {
-    selectedNote.style.outline = "";
-    selectedNote = null;
-  }
-});
+
 
 //KEYPRESSES --------------------------------------------------
 //#############################################################
@@ -380,11 +377,22 @@ function paste() {
 function undo() {
   const lastAction = undoStack.pop();
   if (lastAction) {
-    redoStack.push(lastAction);
+    redoStack.push({
+      action: lastAction.action,
+      note: lastAction.note,
+      previousState: {
+        left: lastAction.note.style.left,
+        width: lastAction.note.style.width
+      }
+    });
     if (lastAction.action === 'remove') {
       currentContainer.appendChild(lastAction.note);
     } else if (lastAction.action === 'add') {
       lastAction.note.remove();
+    } else if (lastAction.action === 'move') {
+      lastAction.note.style.left = lastAction.move;
+    } else if (lastAction.action === 'resize') {
+      lastAction.note.style.width = lastAction.resize;
     }
   }
 }
@@ -392,11 +400,20 @@ function undo() {
 function redo() {
   const lastAction = redoStack.pop();
   if (lastAction) {
-    undoStack.push(lastAction);
+    undoStack.push({
+      action: lastAction.action,
+      note: lastAction.note,
+      move: lastAction.note.style.left,
+      resize: lastAction.note.style.width
+    });
     if (lastAction.action === 'remove') {
       lastAction.note.remove();
     } else if (lastAction.action === 'add') {
       currentContainer.appendChild(lastAction.note);
+    } else if (lastAction.action === 'move') {
+      lastAction.note.style.left = lastAction.previousState.left;
+    } else if (lastAction.action === 'resize') {
+      lastAction.note.style.width = lastAction.previousState.width;
     }
   }
 }
@@ -427,11 +444,21 @@ let isResizing = false;
 let startX;
 let note;
 let selectedNote = null;
+let lastResize = null;
+let lastDrag = null;
 
 document.addEventListener("mouseup", () => {
   isDragging = false;
   isResizing = false;
   playbarDrag = false;
+
+  if (note) {
+    if (note.style.left !== lastDrag) {
+      undoStack.push({ action: 'move',move: lastDrag, note: note});
+    } else if (note.style.width !== lastResize) {
+      undoStack.push({ action: 'resize',resize: lastResize, note: note});
+    }
+  }
 });
 
 document.addEventListener('click', (event) => {
@@ -442,6 +469,27 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+  for (const child of container.children) {
+    if (child.classList.contains('grid-noteArea')) {
+      firstNoteArea = child;
+      break;
+    }
+  }
+  for (const child of container.children) {
+    if (child.classList.contains('grid-item')) {
+      firstNoteName = child;
+
+      const parentComputedStyle = window.getComputedStyle(container);
+      const gap = parseFloat(parentComputedStyle.rowGap);
+      const paddingLeft = parseFloat(parentComputedStyle.paddingLeft);
+
+      firstNoteNameWidth = firstNoteName.getBoundingClientRect().width +gap+paddingLeft;
+
+      break;
+    }
+  }
+
+
   loadPiano();
 
   document.querySelectorAll('.grid-noteArea').forEach(container => {
@@ -460,7 +508,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (event.target.classList.contains("note")) {
   
         note = event.target;
-    
+        
+        lastDrag = note.style.left
+        lastResize = note.style.width
+
+
         // Check if the user is clicking near the right edge to resize
         const rect = note.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -514,28 +566,13 @@ document.addEventListener('DOMContentLoaded', function() {
           note.style.width = newWidth + "px";
         }
       }
+
+
+
     });
   });
 
-  for (const child of container.children) {
-    if (child.classList.contains('grid-noteArea')) {
-      firstNoteArea = child;
-      break;
-    }
-  }
-  for (const child of container.children) {
-    if (child.classList.contains('grid-item')) {
-      firstNoteName = child;
-
-      const parentComputedStyle = window.getComputedStyle(container);
-      const gap = parseFloat(parentComputedStyle.rowGap);
-      const paddingLeft = parseFloat(parentComputedStyle.paddingLeft);
-
-      firstNoteNameWidth = firstNoteName.getBoundingClientRect().width +gap+paddingLeft;
-
-      break;
-    }
-  }
+  
 
   const tempoValue = document.getElementById('tempo-value');
   const increaseButton = document.getElementById('increase');

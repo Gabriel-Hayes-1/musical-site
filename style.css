@@ -126,6 +126,9 @@ body {
     position: relative;
     padding-bottom: 40px;
 }
+#tempo-hover button {
+    height: 30px;
+}
 
   
 #tempo-menu {
