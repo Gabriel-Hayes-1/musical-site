@@ -28,6 +28,30 @@ const notes = [
     "D#", "D", "C#", "C"
 ];
 
+function scrollToElement(element, down) {
+  const bounding = element.getBoundingClientRect();
+  const padding = 0; // Define padding value
+
+  if (down) {
+    if (bounding.bottom > window.innerHeight - padding) {
+      element.scrollIntoView({
+        block: 'end',
+        behavior: 'smooth',
+        inline: 'nearest'
+      });
+    }
+  } else {
+    if (bounding.top < padding) {
+      element.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth',
+        inline: 'nearest'
+      });
+    }
+  }
+}
+
+
 function bpmToSpeed(bpm) { return (60000 / bpm)/20; }
 
 const totalRows = rows * numofOctaves;
@@ -55,7 +79,11 @@ function loadPiano() {
           gridItem.textContent = notes[noteIndex].concat(octave + 1);
 
           gridItem.addEventListener("click", () => {
-            alert("sample sound is supposed to play")
+            playSound(noteToHertz(notes[noteIndex].concat(octave + 1)), 1000);
+          gridItem.style.backgroundColor = "yellow";
+          setTimeout(() => {
+            bgColor(gridItem, noteIndex);
+          }, 1000);
           });
 
         } else {
@@ -336,7 +364,7 @@ let undoStack = [];
 let redoStack = [];
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Backspace' && selectedNote) {
+  if ((event.key === 'Backspace' || event.key === 'Delete') && selectedNote) {
     undoStack.push({ action: 'remove', note: selectedNote });
     selectedNote.remove();
     selectedNote = null;
@@ -351,6 +379,26 @@ document.addEventListener('keydown', (event) => {
     undo();
   } else if (event.key === 'y' && event.ctrlKey) {
     redo();
+  } else if (event.key === 'Escape') {
+    customMenu.style.display = 'none';
+    selectedNote.style.outline = "";
+    selectedNote = null;
+  } else if (event.key === 'ArrowDown' && selectedNote) {
+    event.preventDefault();
+    scrollToElement(selectedNote,true);
+    const currentContainer = selectedNote.parentElement;
+    const nextContainer = currentContainer.nextElementSibling.nextElementSibling;
+    if (nextContainer && nextContainer.classList.contains('grid-noteArea')) {
+      nextContainer.appendChild(selectedNote);
+    }
+  } else if (event.key === 'ArrowUp' && selectedNote) {
+    event.preventDefault();
+    scrollToElement(selectedNote,false);
+    const currentContainer = selectedNote.parentElement;
+    const prevContainer = currentContainer.previousElementSibling.previousElementSibling;
+    if (prevContainer && prevContainer.classList.contains('grid-noteArea')) {
+      prevContainer.appendChild(selectedNote);
+    }
   }
 });
 
@@ -446,7 +494,17 @@ let selectedNote = null;
 let lastResize = null;
 let lastDrag = null;
 
-document.addEventListener("mouseup", () => {
+document.addEventListener("mouseup", (event) => {
+  
+  
+  const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
+  if (elementUnderMouse && elementUnderMouse.classList.contains('grid-noteArea')) {
+    if (isDragging) {
+      elementUnderMouse.appendChild(selectedNote);
+    }
+  }
+
+
   isDragging = false;
   isResizing = false;
   playbarDrag = false;
@@ -458,6 +516,9 @@ document.addEventListener("mouseup", () => {
       undoStack.push({ action: 'resize',resize: lastResize, note: note});
     }
   }
+
+  
+
 });
 
 document.addEventListener('click', (event) => {
@@ -532,6 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.addEventListener("mousemove", (event) => {
       if (isDragging) {
+
         const dx = event.clientX - startX; //x axis distance mouse has traveled since last event fire
         startX = event.clientX; //update variable for next event fire
     
@@ -546,6 +608,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!(noteRect.right+dx > containerRect.right)) { //plus dx to ensure the element is not stuck at edge
           note.style.left = newLeft + "px";
         }
+
+
       } else if (isResizing) {
         const dx = event.clientX - startX;
         startX = event.clientX;
@@ -574,17 +638,65 @@ document.addEventListener('DOMContentLoaded', function() {
   const increaseButton = document.getElementById('increase');
   const decreaseButton = document.getElementById('decrease');
 
+  let speed;
+  let increaseInterval;
+  let decreaseInterval;
+
+  const increaseSpeed = 50 //milliseconds per increase when held
+
   tempoValue.addEventListener('input', function() {
     speed = bpmToSpeed(parseInt(tempoValue.value));
   });
 
-  increaseButton.addEventListener('click', function() {
-      tempoValue.value = parseInt(tempoValue.value) + 1;
-      speed = bpmToSpeed(parseInt(tempoValue.value));
+
+  const defaultValue = tempoValue.value; // Store the default value
+
+  tempoValue.addEventListener('focus', function() {
+    // Clear the input when it is focused
+      tempoValue.value = '';
   });
 
-  decreaseButton.addEventListener('click', function() {
+  tempoValue.addEventListener('keydown', function(event) {
+    // If the Enter key is pressed, blur the input
+    if (event.key === 'Enter') {
+      tempoValue.blur();
+    }
+  });
+
+  tempoValue.addEventListener('blur', function() {
+    // If the input is empty, revert to the default value
+    if (tempoValue.value === '') {
+      tempoValue.value = defaultValue;
+    }
+  });
+
+  increaseButton.addEventListener('mousedown', function() {
+    increaseInterval = setInterval(function() {
+      tempoValue.value = parseInt(tempoValue.value) + 1;
+      speed = bpmToSpeed(parseInt(tempoValue.value));
+    }, increaseSpeed); // Adjust the interval time as needed
+  });
+
+  increaseButton.addEventListener('mouseup', function() {
+    clearInterval(increaseInterval);
+  });
+
+  increaseButton.addEventListener('mouseleave', function() {
+    clearInterval(increaseInterval);
+  });
+
+  decreaseButton.addEventListener('mousedown', function() {
+    decreaseInterval = setInterval(function() {
       tempoValue.value = parseInt(tempoValue.value) - 1;
       speed = bpmToSpeed(parseInt(tempoValue.value));
+    }, increaseSpeed); // Adjust the interval time as needed
+  });
+
+  decreaseButton.addEventListener('mouseup', function() {
+    clearInterval(decreaseInterval);
+  });
+
+  decreaseButton.addEventListener('mouseleave', function() {
+    clearInterval(decreaseInterval);
   });
 });

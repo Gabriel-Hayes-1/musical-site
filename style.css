@@ -8,7 +8,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 70px);
     grid-template-rows: repeat(12, 50px);   /* 12 rows */
-    gap: 5px; /* Optional: space between grid items */
+    column-gap: 5px;
     
 }
 #toolbar {
@@ -42,19 +42,18 @@ body {
     width:70px;
     height: 50px;
     font-family: Helvetica, sans-serif;
-    border-radius: 5px;
     cursor: pointer;
     color: #888888;
     user-select: none;
 }
 .grid-noteArea {
+    border-top: 2px solid #202045;
     position: relative;
     align-items: center;
     justify-content: center;
     width:1000px;
     height: 50px;
     font-family: Helvetica, sans-serif;
-    border-radius: 5px;
     color: #888888;
     user-select: none;
     background-color: #000025;
