@@ -55,7 +55,11 @@ function loadPiano() {
           gridItem.textContent = notes[noteIndex].concat(octave + 1);
 
           gridItem.addEventListener("click", () => {
-            alert("sample sound is supposed to play")
+            gridItem.style.backgroundColor = "yellow";
+            playSound(noteToHertz(notes[noteIndex].concat(octave + 1)), 500);
+            setTimeout(() => {
+              gridItem.style.backgroundColor = bgColor(gridItem, noteIndex);
+            },500)
           });
 
         } else {
@@ -90,13 +94,28 @@ function playSound(frequency, duration) {
   activeOscillators.push({ oscillator, audioContext }); // Add to active oscillators
 
   setTimeout(() => {
+    if (audioContext.state === "running") {
     oscillator.stop();
     audioContext.close();
     activeOscillators = activeOscillators.filter(o => o.oscillator !== oscillator); // Remove from active oscillators
+    }
   }, duration);
 }
 
+let scheduledTimeouts = []; // Array to keep track of scheduled timeouts
+
 function playMusic() {
+  // Stop all active oscillators
+  activeOscillators.forEach(({ oscillator, audioContext }) => {
+    oscillator.stop();
+    audioContext.close();
+  });
+  activeOscillators = []; // Clear the array
+
+  // Clear all scheduled timeouts
+  scheduledTimeouts.forEach(timeout => clearTimeout(timeout));
+  scheduledTimeouts = []; // Clear the array
+
   const musicQueue = {}; // Dictionary to store pitches and their left values
   const initialPlaybarPosition = parseInt(playbar.style.left || "80", 10); // Get the initial position of the playbar
   
@@ -122,9 +141,10 @@ function playMusic() {
       const noteEnd = note.left + note.width;
       const delay = (note.left - initialPlaybarPosition + firstNoteNameWidth) * speed;
       if (delay >= 0) {
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           playSound(noteToHertz(pitch), note.width * speed);
         }, delay);
+        scheduledTimeouts.push(timeout);
       } else if (initialPlaybarPosition > note.left) {
         playSound(noteToHertz(pitch), (noteEnd-initialPlaybarPosition + firstNoteNameWidth) * speed);
       }
@@ -189,7 +209,7 @@ function bgColor(element, row) {
 let animating = false
 // Define the movePlaybar function
 function movePlaybar() {
-  let leftPosition = firstNoteNameWidth; // Starting position as a number
+  let leftPosition = parseInt(playbar.style.left || firstNoteNameWidth); // Starting position as a number
   
   const areaSize = firstNoteArea.getBoundingClientRect();
   const targetPosition = areaSize.right;
@@ -271,6 +291,10 @@ document.getElementById("stop").addEventListener("click", () => {
     audioContext.close();
   });
   activeOscillators = []; // Clear the array
+
+  // Clear all scheduled timeouts
+  scheduledTimeouts.forEach(timeout => clearTimeout(timeout));
+  scheduledTimeouts = []; // Clear the array
 });
 
 
@@ -291,9 +315,10 @@ document.getElementById("Clear").addEventListener("click", async () => {
 let currentContainer = null
 let lastClickedNote = null
 
-document.getElementById("addNote").addEventListener("click", () =>{
+document.getElementById("addNote").addEventListener("click", (event) =>{
   if (currentContainer) {
     const note = document.createElement('div');
+    note.style.left = `${event.clientX-firstNoteNameWidth}px`;
     note.classList.add('note');
     currentContainer.appendChild(note);
     
@@ -324,9 +349,7 @@ document.getElementById("deleteNote").addEventListener("click", () => {
 
 
 
-document.addEventListener('click', () => {
-  customMenu.style.display = 'none';
-});
+
 
 
 //KEYPRESSES --------------------------------------------------
@@ -441,6 +464,7 @@ function addNoteEventListeners(note) {
 let isDragging = false;
 let isResizing = false;
 let startX;
+let startY;
 let note;
 let selectedNote = null;
 let lastResize = null;
@@ -461,6 +485,8 @@ document.addEventListener("mouseup", () => {
 });
 
 document.addEventListener('click', (event) => {
+  customMenu.style.display = 'none';
+
   if (selectedNote && !event.target.classList.contains('note')) {
     selectedNote.style.outline = ""; // Remove outline from previously selected note
     selectedNote = null; // Reset selected note
@@ -527,16 +553,29 @@ document.addEventListener('DOMContentLoaded', function() {
           selectedNote.style.outline = ""; // Remove outline from previously selected note
         }
         selectedNote = note;
+        currentContainer = container; 
+        selectedNote.style.zIndex = 700;
         selectedNote.style.outline = "2px solid blue"; // Add outline to selected note
       }
     });
     document.addEventListener("mousemove", (event) => {
       if (isDragging) {
-        const dx = event.clientX - startX; //x axis distance mouse has traveled since last event fire
-        startX = event.clientX; //update variable for next event fire
+        const oldParent = note.parentElement;
+
+
+        const dx = event.clientX - startX; //x and y axis distance mouse has traveled since last event fire
+        const dy = event.clientY - startY; 
+
+        startX = event.clientX; //update variables for next event fire
+        startY = event.clientY; 
     
         const left = parseInt(note.style.left || "0", 10); //current left value of note
         const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
+
+        const top = parseInt(note.style.top || "0", 10); //current top value of note
+        const newTop = Math.max(0, top + dy); //new top value of note (where we're moving it to)
+
+        note.style.top = newTop + "px"; //update the note's top value
     
         // container and note boundaries (we're only using left and right)
         const containerRect = container.getBoundingClientRect();
