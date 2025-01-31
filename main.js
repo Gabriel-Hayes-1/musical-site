@@ -277,12 +277,21 @@ playbarController.addEventListener("mousedown", (event) => {
 });
 document.addEventListener("mousemove", (event) => {
   if (playbarDrag) {
-    movePlaybarTo(event.clientX);
+    const containerRect = playbarController.getBoundingClientRect();
+    if (event.clientX < containerRect.left+1) {
+      movePlaybarTo(containerRect.left+1);
+    } else if (event.clientX > containerRect.right-1) {
+      movePlaybarTo(containerRect.right - 1);
+    } else {
+      movePlaybarTo(event.clientX);
+    }
   }
 });
 function movePlaybarTo(position) {
   if (position < firstNoteArea.getBoundingClientRect().right && position > firstNoteArea.getBoundingClientRect().left) {
     playbar.style.left = `${position}px`;
+  } else {
+    console.log("Invalid position");
   }
   if (animating) {
     clearTimeout(window.animationTimeout);
