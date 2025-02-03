@@ -47,7 +47,7 @@ body {
     user-select: none;
 }
 .grid-noteArea {
-    border-bottom: 10px solid #202045;
+    border-bottom: 2px solid #202045;
     position: relative;
     align-items: center;
     justify-content: center;
@@ -57,6 +57,7 @@ body {
     color: #888888;
     user-select: none;
     background-color: #000025;
+    box-sizing: border-box; 
 }
 
 #context-menu {

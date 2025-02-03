@@ -699,7 +699,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         const dx = event.clientX - startX; //x and y axis distance mouse has traveled since last event fire
-        const dy = event.clientY - startY; 
 
         startX = event.clientX; //update variables for next event fire
         startY = event.clientY; 
@@ -707,10 +706,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const left = parseInt(note.style.left || "0", 10); //current left value of note
         const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
 
-        const top = parseInt(note.style.top || "0", 10); //current top value of note
-        const newTop = Math.max(0, top + dy); //new top value of note (where we're moving it to)
 
-        note.style.top = newTop + "px"; //update the note's top value
     
         // container and note boundaries (we're only using left and right)
         const containerRect = container.getBoundingClientRect();
