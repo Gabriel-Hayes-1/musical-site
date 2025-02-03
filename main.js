@@ -9,7 +9,11 @@ let clipboard = null;
 
 
 let speed = bpmToSpeed(120); // Initial speed (120 BPM)
+let snap = true; // Snap to grid by default
+let snapValue = 10; // Snap value in pixels
 
+
+let volume = 100; // Initial volume (100%)
 
 const customMenu = document.getElementById("context-menu")
 const rows = 12; // Rows per octave
@@ -97,8 +101,10 @@ function loadPiano() {
           
 
         container.appendChild(gridItem);
+
     }
     adjustPlaybarControllerSize();
+    console.log(allNoteSpaces)
 }
 let activeOscillators = []; // Array to keep track of active oscillators
 
@@ -409,8 +415,10 @@ document.addEventListener('keydown', (event) => {
     redo();
   } else if (event.key === 'Escape') {
     customMenu.style.display = 'none';
-    selectedNote.style.outline = "";
-    selectedNote = null;
+    if (selectedNote) {
+      selectedNote.style.outline = "";
+      selectedNote = null;
+    }
   } else if (event.key === 'ArrowDown' && selectedNote) {
     event.preventDefault();
     scrollToElement(selectedNote,true);
@@ -511,6 +519,67 @@ function addNoteEventListeners(note) {
   });
 }
 
+function setupControls(numInput, increaseButton, decreaseButton) {
+  let speed;
+  let increaseInterval;
+  let decreaseInterval;
+  const increaseSpeed = 50; // milliseconds per increase when held
+
+  let defaultValue = numInput.value; // Store the default value
+
+  numInput.addEventListener('input', function() {
+    speed = bpmToSpeed(parseInt(numInput.value));
+    defaultValue = numInput.value;
+  });
+
+  numInput.addEventListener('focus', function() {
+    numInput.value = '';
+  });
+
+  numInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+      numInput.blur();
+    }
+  });
+
+  numInput.addEventListener('blur', function() {
+    if (numInput.value === '') {
+      numInput.value = defaultValue;
+    }
+  });
+
+  increaseButton.addEventListener('mousedown', function() {
+    increaseInterval = setInterval(function() {
+      numInput.value = parseInt(numInput.value) + 1;
+      speed = bpmToSpeed(parseInt(numInput.value));
+      defaultValue = numInput.value;
+    }, increaseSpeed);
+  });
+
+  increaseButton.addEventListener('mouseup', function() {
+    clearInterval(increaseInterval);
+  });
+
+  increaseButton.addEventListener('mouseleave', function() {
+    clearInterval(increaseInterval);
+  });
+
+  decreaseButton.addEventListener('mousedown', function() {
+    decreaseInterval = setInterval(function() {
+      numInput.value = parseInt(numInput.value) - 1;
+      speed = bpmToSpeed(parseInt(numInput.value));
+      defaultValue = numInput.value;
+    }, increaseSpeed);
+  });
+
+  decreaseButton.addEventListener('mouseup', function() {
+    clearInterval(decreaseInterval);
+  });
+
+  decreaseButton.addEventListener('mouseleave', function() {
+    clearInterval(decreaseInterval);
+  });
+}
 
 
 
@@ -678,68 +747,22 @@ document.addEventListener('DOMContentLoaded', function() {
   
 
   const tempoValue = document.getElementById('tempo-value');
-  const increaseButton = document.getElementById('increase');
-  const decreaseButton = document.getElementById('decrease');
+  const increaseButton = tempoValue.parentElement.querySelector('#increase');
+  const decreaseButton = tempoValue.parentElement.querySelector('#decrease');
 
-  let speed;
-  let increaseInterval;
-  let decreaseInterval;
+  const volumeValue = document.getElementById('volume-value');
+  const volumeIncrease = volumeValue.parentElement.querySelector('#increase');
+  const voluemDecrease = volumeValue.parentElement.querySelector('#decrease');
 
-  const increaseSpeed = 50 //milliseconds per increase when held
+  setupControls(tempoValue, increaseButton, decreaseButton);
 
-  tempoValue.addEventListener('input', function() {
-    speed = bpmToSpeed(parseInt(tempoValue.value));
+  let lastvolume = volumeValue.value;
+  volumeValue.addEventListener('input', function() {
+    volume = parseInt(volumeValue.value);
+    lastvolume = volumeValue.value;
   });
-
-
-  const defaultValue = tempoValue.value; // Store the default value
-
-  tempoValue.addEventListener('focus', function() {
-    // Clear the input when it is focused
-      tempoValue.value = '';
+  volumeValue.addEventListener('focus', function() {
+    volumeValue.value = '';
   });
-
-  tempoValue.addEventListener('keydown', function(event) {
-    // If the Enter key is pressed, blur the input
-    if (event.key === 'Enter') {
-      tempoValue.blur();
-    }
-  });
-
-  tempoValue.addEventListener('blur', function() {
-    // If the input is empty, revert to the default value
-    if (tempoValue.value === '') {
-      tempoValue.value = defaultValue;
-    }
-  });
-
-  increaseButton.addEventListener('mousedown', function() {
-    increaseInterval = setInterval(function() {
-      tempoValue.value = parseInt(tempoValue.value) + 1;
-      speed = bpmToSpeed(parseInt(tempoValue.value));
-    }, increaseSpeed); // Adjust the interval time as needed
-  });
-
-  increaseButton.addEventListener('mouseup', function() {
-    clearInterval(increaseInterval);
-  });
-
-  increaseButton.addEventListener('mouseleave', function() {
-    clearInterval(increaseInterval);
-  });
-
-  decreaseButton.addEventListener('mousedown', function() {
-    decreaseInterval = setInterval(function() {
-      tempoValue.value = parseInt(tempoValue.value) - 1;
-      speed = bpmToSpeed(parseInt(tempoValue.value));
-    }, increaseSpeed); // Adjust the interval time as needed
-  });
-
-  decreaseButton.addEventListener('mouseup', function() {
-    clearInterval(decreaseInterval);
-  });
-
-  decreaseButton.addEventListener('mouseleave', function() {
-    clearInterval(decreaseInterval);
-  });
+  volumeValue.add
 });

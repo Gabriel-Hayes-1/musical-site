@@ -17,7 +17,7 @@
         <button id="start">Play</button>
         <button id="stop">Stop</button>
         <button id="Clear">Clear</button>
-        <div id="tempo-hover">
+        <div id="hover">
             <button id="tempo">tempo</button>
             <div id="tempo-menu">
                 <button id="decrease">-</button>
@@ -25,11 +25,20 @@
                 <button id="increase">+</button>
             </div>
         </div>
+        <div id="hover">
+            <button id="volume">volume</button>
+            <div id="volume-menu">
+                <button id="decrease">-</button>
+                <input type="number" id="volume-value" placeholder="Volume" value="100">                
+                <button id="increase">+</button>
+            </div>
+        </div>
+        
+
     </div>
     <div id="playbar-controller"></div>
     <div id="note-container">
-
-    </div>
-    <script src="main.js"></script>
+    
+        <script src="main.js"></script>
 </body>
 </html>

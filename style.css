@@ -8,7 +8,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 70px);
     grid-template-rows: repeat(12, 50px);   /* 12 rows */
-    column-gap: 5px;
+    column-gap: 2px;
     
 }
 #toolbar {
@@ -47,7 +47,7 @@ body {
     user-select: none;
 }
 .grid-noteArea {
-    border-top: 2px solid #202045;
+    border-bottom: 10px solid #202045;
     position: relative;
     align-items: center;
     justify-content: center;
@@ -121,16 +121,15 @@ body {
 
 
 
-#tempo-hover {
+#hover {
     position: relative;
     padding-bottom: 40px;
 }
-#tempo-hover button {
+#hover button {
     height: 30px;
 }
 
-  
-#tempo-menu {
+#hover div {
     display: none;
     position: absolute;
     top: 100%;
@@ -142,7 +141,7 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
 }
-#tempo-menu button {
+#hover div button {
     display: flex;
     width: 30px;
     height: 30px;
@@ -153,7 +152,7 @@ body {
     cursor: pointer;
 }
 
-#tempo-menu input {
+#hover div input {
     width: 50px;
 }
 
@@ -163,6 +162,6 @@ input[type="number"]::-webkit-outer-spin-button {
     margin:0px;
 }
   
-  #tempo-hover:hover #tempo-menu {
+  #hover:hover div {
     display: flex;
   }
