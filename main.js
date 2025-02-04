@@ -2,15 +2,15 @@ const container = document.getElementById("note-container");
 const playbar = document.getElementById("playbar")
 
 
-let firstNoteArea = null;
-let firstNoteName = null;
-let firstNoteNameWidth = null;
+let firstNoteArea = null; //first note area
+let firstNoteName = null; //first pitch marker
+let firstNoteNameWidth = null; //width of note pitch marker
 let clipboard = null;
 
 
 let speed = bpmToSpeed(120); // Initial speed (120 BPM)
 let snap = true; // Snap to grid by default
-let snapValue = 10; // Snap value in pixels
+let snapValue = 50; // Snap value in pixels
 
 
 let volume = 100; // Initial volume (100%)
@@ -31,6 +31,12 @@ const notes = [
     "G", "F#", "F", "E",
     "D#", "D", "C#", "C"
 ];
+
+function roundToMultiple(value, multiple) {
+  return Math.round(value / multiple) * multiple;
+}
+
+
 
 function scrollToElement(element, down) {
   const bounding = element.getBoundingClientRect();
@@ -103,7 +109,8 @@ function loadPiano() {
         container.appendChild(gridItem);
 
     }
-    adjustPlaybarControllerSize();
+    adjustPlaybarController();
+    addSnapMarkers();
     console.log(allNoteSpaces)
 }
 let activeOscillators = []; // Array to keep track of active oscillators
@@ -281,6 +288,7 @@ playbarController.addEventListener("mousedown", (event) => {
   playbarDrag = true;
   movePlaybarTo(event.clientX);
 });
+// Event listener to handle dragging and resizing of notes
 document.addEventListener("mousemove", (event) => {
   if (playbarDrag) {
     const containerRect = playbarController.getBoundingClientRect();
@@ -307,15 +315,30 @@ function movePlaybarTo(position) {
 
 
 
-
-function adjustPlaybarControllerSize() {
+function adjustPlaybarController() {
   const firstNoteArea = document.querySelector('.grid-noteArea');
   if (firstNoteArea) {
-      const noteAreaWidth = firstNoteArea.getBoundingClientRect().width;
-      playbarController.style.width = `${noteAreaWidth}px`;
+      const noteAreaSize = firstNoteArea.getBoundingClientRect();
+
+
+      playbarController.style.left = `${noteAreaSize.left}px`;
+      playbarController.style.width = `${noteAreaSize.width}px`;
   }
 }
 
+function addSnapMarkers() {
+  const firstNoteArea = document.querySelector('.grid-noteArea');
+  const noteAreaWidth = firstNoteArea.getBoundingClientRect().width;
+
+  //get how many times snap-value fits in the noteAreaWidth
+  const numSnapMarkers = Math.floor(noteAreaWidth / snapValue);
+  for (let i = 0; i < numSnapMarkers; i++) {
+    const snapMarker = document.createElement('div');
+    snapMarker.classList.add('snap-marker');
+    snapMarker.style.left = `${snapValue * i}px`;
+    document.body.appendChild(snapMarker);
+  }
+}
 
 document.getElementById("stop").addEventListener("click", () => {
   animating = false;
@@ -532,7 +555,8 @@ function setupControls(numInput, increaseButton, decreaseButton) {
     defaultValue = numInput.value;
   });
 
-  numInput.addEventListener('focus', function() {
+  numInput.addEventListener('focus', function(event) {
+    event.preventDefault();
     numInput.value = '';
   });
 
@@ -591,6 +615,8 @@ let note;
 let selectedNote = null;
 let lastResize = null;
 let lastDrag = null;
+let mouseOffset = null;
+let rightMouseOffset = null;
 
 document.addEventListener("mouseup", (event) => {
   
@@ -679,7 +705,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
           isDragging = true;
         }
-    
+        mouseOffset = offsetX;
+        rightMouseOffset = rect.width - offsetX;
+
         startX = event.clientX;
         event.preventDefault();
 
@@ -695,27 +723,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.addEventListener("mousemove", (event) => {
       if (isDragging) {
-        const oldParent = note.parentElement;
+        const parent = note.parentElement;
 
+        const parentLeft = parent.getBoundingClientRect().left;
+        const parentRight = parent.getBoundingClientRect().right;
+        const parentWidth = parent.getBoundingClientRect().width;
 
-        const dx = event.clientX - startX; //x and y axis distance mouse has traveled since last event fire
-
-        startX = event.clientX; //update variables for next event fire
-        startY = event.clientY; 
+        const noteWidth = note.getBoundingClientRect().width;
     
-        const left = parseInt(note.style.left || "0", 10); //current left value of note
-        const newLeft = Math.max(0, left + dx); //new left value of note (where we're moving it to)
-
-
-    
-        // container and note boundaries (we're only using left and right)
-        const containerRect = container.getBoundingClientRect();
-        const noteRect = note.getBoundingClientRect();
-    
-        //noterect.right = total distance from left side of screen to right side of note
-        if (!(noteRect.right+dx > containerRect.right)) { //plus dx to ensure the element is not stuck at edge
-          note.style.left = newLeft + "px";
+        if (roundToMultiple(event.clientX+rightMouseOffset,snapValue) < parentRight) { 
+          if (event.clientX-mouseOffset > parentLeft) {
+            note.style.left = roundToMultiple(event.clientX-parentLeft - mouseOffset, snapValue) + "px";
+          } else {
+            note.style.left = "0px";
+          }
+        } else {
+          note.style.left = parentWidth-noteWidth + "px";
         }
+
 
 
       } else if (isResizing) {
@@ -748,17 +773,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const volumeValue = document.getElementById('volume-value');
   const volumeIncrease = volumeValue.parentElement.querySelector('#increase');
-  const voluemDecrease = volumeValue.parentElement.querySelector('#decrease');
+  const volumeDecrease = volumeValue.parentElement.querySelector('#decrease');
 
   setupControls(tempoValue, increaseButton, decreaseButton);
 
-  let lastvolume = volumeValue.value;
-  volumeValue.addEventListener('input', function() {
-    volume = parseInt(volumeValue.value);
-    lastvolume = volumeValue.value;
-  });
-  volumeValue.addEventListener('focus', function() {
-    volumeValue.value = '';
-  });
-  volumeValue.add
+  setupControls(volumeValue, volumeIncrease, volumeDecrease);
 });
